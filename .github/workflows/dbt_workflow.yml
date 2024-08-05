@@ -1,0 +1,40 @@
+# This is a basic workflow that is manually triggered
+
+name: dbt_workflow
+
+on:
+  workflow_dispatch:
+env:
+  DBT_PROFILES_DIR: ./dbt
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  DBT_POSTGRES_SCHEMA: ${{ secrets.DBT_POSTGRES_SCHEMA }}
+  DBT_POSTGRES_ACCOUNT: ${{ secrets.DBT_POSTGRES_ACCOUNT }}
+  DBT_POSTGRES_DATABASE: ${{ secrets.DBT_POSTGRES_DATABASE }}
+  DBT_POSTGRES_USERNAME: ${{ secrets.DBT_POSTGRES_USERNAME }}
+  DBT_POSTGRES_WAREHOUSE: ${{ secrets.DBT_POSTGRES_WAREHOUSE }}
+
+jobs:
+ 
+ dbt_workflow:
+     name: dbt_workflow
+     runs-on: ubuntu-latest
+
+     steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+         python-version: "3.12.x"
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-core==1.8.4
+          pip install dbt-postgres==1.8.2
+          dbt deps
+          
+      # dbt model specifics
+      
+      - name: check dbt
+        run: dbt debug

@@ -1,40 +1,75 @@
 # This is a basic workflow that is manually triggered
-
-name: dbt_workflow
+name: COVID-19 Data Pipeline
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-env:
-  DBT_PROFILES_DIR: ./dbt
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  DBT_POSTGRES_SCHEMA: ${{ secrets.DBT_POSTGRES_SCHEMA }}
-  DBT_POSTGRES_ACCOUNT: ${{ secrets.DBT_POSTGRES_ACCOUNT }}
-  DBT_POSTGRES_DATABASE: ${{ secrets.DBT_POSTGRES_DATABASE }}
-  DBT_POSTGRES_USERNAME: ${{ secrets.DBT_POSTGRES_USERNAME }}
-  DBT_POSTGRES_WAREHOUSE: ${{ secrets.DBT_POSTGRES_WAREHOUSE }}
 
 jobs:
- 
- dbt_workflow:
-     name: dbt_workflow
-     runs-on: ubuntu-latest
+  setup:
+    runs-on: ubuntu-latest
 
-     steps:
-      - name: Check out
-        uses: actions/checkout@v3
+    services:
+      db:
+        image: postgres:13
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: covid19
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-         python-version: "3.12.x"
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Install dependencies
-        run: |
-          pip install dbt-core==1.8.4
-          pip install dbt-postgres==1.8.2
-          dbt deps
-          
-      # dbt model specifics
-      
-      - name: check dbt
-        run: dbt debug
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas sqlalchemy psycopg2-binary dbt-core dbt-postgres
+
+    - name: Install dbt
+      run: |
+        apt-get update && apt-get install -y build-essential libpq-dev
+
+    - name: Run data ingestion
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        POSTGRES_DB: covid19
+        DB_HOST: localhost
+      run: |
+        python your_data_ingestion_script.py
+
+    - name: Set up dbt profile
+      run: |
+        mkdir -p ~/.dbt
+        echo 'covid19:
+          outputs:
+            dev:
+              type: postgres
+              host: localhost
+              user: ${{ secrets.POSTGRES_USER }}
+              password: ${{ secrets.POSTGRES_PASSWORD }}
+              dbname: covid19
+              schema: public
+              threads: 1
+              keepalives_idle: 0
+          target: dev' > ~/.dbt/profiles.yml
+
+    - name: Run dbt models
+      run: |
+        dbt run --profiles-dir ~/.dbt

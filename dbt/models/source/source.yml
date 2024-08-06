@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: covid19_source
+    description: "COVID-19 data source from Johns Hopkins University repository."
+    tables:
+      - name: confirmed
+        description: "Raw confirmed cases data."
+      - name: deaths
+        description: "Raw deaths data."
+      - name: recovered
+        description: "Raw recovered cases data."

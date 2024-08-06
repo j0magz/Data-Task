@@ -1,0 +1,14 @@
+name: 'covid19_project'
+version: '1.0'
+config-version: 2
+
+profile: 'covid19'
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_modules"
+
+models:
+  covid19_project:
+    +schema: public
+    +materialized: view
